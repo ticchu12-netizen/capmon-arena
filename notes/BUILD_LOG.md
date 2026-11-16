@@ -11,6 +11,7 @@ Living file. Lets any session pick up the Season 0 build without the chat histor
 | 3. Look and share (sprites, stage art, share cards, sound) | Not started. Creatures are still stand-in icons |
 | 4. Hardening and launch kit | Not started |
 | Hosting | Repo exists and is empty, DNS is live. **Blocked: Claude cannot push yet** (see below) |
+| Preview | Private Claude artifact, published Nov 16: https://claude.ai/artifact/Bywz1fikpMiSKcA9fbjMhP (built by `tools/bundle_artifact.py`, weights shipped as `brain.js`) |
 
 **Next action:** get the first push through, turn on GitHub Pages (main branch, `/docs` folder), then Stage 3 starting with the real sprites.
 
@@ -18,7 +19,7 @@ Living file. Lets any session pick up the Season 0 build without the chat histor
 
 - Repo `ticchu12-netizen/capmon-arena`: created by Tik, empty, readable from Claude.
 - DNS: `arena.capmon.fun` CNAME to `ticchu12-netizen.github.io` is live (checked Nov 16).
-- Push: refused on Nov 16. The Claude GitHub App has no access to this repo. Fix on Tik's side: https://github.com/apps/claude/installations/select_target, pick the account, add `capmon-arena` under repository access.
+- Push: tried and refused on Nov 16 (HTTP 403). A commit with the whole tree is ready in the local clone. The Claude GitHub App has no access to this repo. Fix on Tik's side: https://github.com/apps/claude/installations/select_target, pick the account, add `capmon-arena` under repository access.
 - Site folder is `docs/` (GitHub Pages: branch `main`, folder `/docs`). `docs/CNAME` holds the domain. `docs/index.html` carries `noindex` until launch day; remove it then.
 - After the first deploy: in GitHub Pages settings turn on Enforce HTTPS, and verify the domain capmon.fun under account settings so nobody else can claim a subdomain.
 

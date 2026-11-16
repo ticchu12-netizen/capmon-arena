@@ -25,7 +25,18 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const pct = (x, d) => { const v = Math.round(x * 100 * (d ? 10 : 1)) / (d ? 10 : 1); return v + '%'; };
   const save = () => S.save(state);
-  const crea = (species, cls) => '<div class="crea ' + (cls || '') + '" data-species="' + esc(species) + '" role="img" aria-label="' + esc(species) + '"></div>';
+  const niceDay = d => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d); if (!m) return d; try { return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch (e) { return d; } };
+  const SHEET = { Rageblaze: { frames: 15, face: 'left' }, Tsunami: { frames: 15, face: 'right' }, Healspike: { frames: 1, face: 'right' } };
+  const crea = (species, cls) => '<div class="crea ' + (cls || '') + '" data-species="' + esc(species) + '" data-face="' + (SHEET[species] ? SHEET[species].face : 'right') + '" role="img" aria-label="' + esc(species) + '"></div>';
+  const setFrame = (el, i) => { el.style.backgroundPosition = ((i % 5) * 25) + '% ' + (Math.floor(i / 5) * 50) + '%, center'; };
+  /** Runs the attack frames of a fighter's sprite once. */
+  function playSprite(fighter, speed, id) {
+    const el = fighter && fighter.firstChild, sh = el && SHEET[el.dataset.species];
+    if (!sh || sh.frames < 2) return;
+    let i = 0;
+    const tick = () => { if (id !== runId || !el.isConnected) return; if (i >= sh.frames) { setFrame(el, 0); return; } setFrame(el, i++); setTimeout(tick, 36 / speed); };
+    tick();
+  }
   const myRef = () => G.studentRef(state.name, state.starter, state.brain);
   const moveType = (species, i) => (i === 1 || i === 3 ? TYPE_NAME[E.SPECIES[species].type] : 'Normal');
   let toastTimer = 0;
@@ -111,9 +122,9 @@
     const recent = recentRecords().slice(0, 6);
     const share = CFG.links === 'hash' ? 'They open the link and their brain plays yours in their browser.' : 'They paste the code under Open a code and their brain plays yours.';
     return '<div class="cols two"><div class="stack">' + brainCard() +
-      '<section class="panel stack"><div class="row between"><span class="eyebrow accent">Today, ' + esc(tc.day) + '</span><span class="dim small">' + played + ' of 3 played</span></div><div class="list">' + rows + '</div>' + cta + '</section></div>' +
+      '<section class="panel stack"><div class="row between"><span class="eyebrow accent">Today, ' + esc(niceDay(tc.day)) + '</span><span class="dim small">' + played + ' of 3 played</span></div><div class="list">' + rows + '</div>' + cta + '</section></div>' +
       '<div class="stack"><section class="panel stack"><span class="eyebrow">Challenge a friend</span><p class="soft">Send your brain. ' + share + '</p><div class="row"><button class="btn" data-act="copy-challenge">Copy ' + (CFG.links === 'hash' ? 'challenge link' : 'my brain code') + '</button><button class="btn ghost" data-act="open-code">Open a code</button></div></section>' +
-      (recent.length ? '<section class="panel"><span class="eyebrow">Recent matches</span><div class="list">' + recent.map(r => matchRow(r.rec, (r.rec.k === 'c' ? 'Challenge' : 'Ranked') + ', ' + r.rec.day, r.attrs)).join('') + '</div></section>' : '') + '</div></div>';
+      (recent.length ? '<section class="panel"><span class="eyebrow">Recent matches</span><div class="list">' + recent.map(r => matchRow(r.rec, (r.rec.k === 'c' ? 'Challenge' : 'Ranked') + ', ' + niceDay(r.rec.day), r.attrs)).join('') + '</div></section>' : '') + '</div></div>';
   }
   function recentRecords() {
     const out = [];
@@ -154,8 +165,8 @@
 
   // ---------- the stage ----------
   function stageHTML() {
-    return '<div class="stage" id="stage"><div class="stage-top"><div class="hud left"><div class="n ellip" id="nA"></div><div class="hp" id="hpA"><i></i></div><div class="v" id="vA"></div></div><div class="hud right"><div class="n ellip" id="nB"></div><div class="hp" id="hpB"><i></i></div><div class="v" id="vB"></div></div></div>' +
-      '<div class="roundchip" id="roundchip"></div><div class="fighter left" id="fA"></div><div class="fighter right" id="fB"></div></div><div class="callout" id="callout" aria-live="polite"></div>';
+    return '<div class="stagebox"><div class="hudrow"><div class="hud left"><div class="n ellip" id="nA"></div><div class="hp" id="hpA"><i></i></div><div class="v" id="vA"></div></div><div class="hud right"><div class="n ellip" id="nB"></div><div class="hp" id="hpB"><i></i></div><div class="v" id="vB"></div></div></div>' +
+      '<div class="stage" id="stage"><div class="roundchip" id="roundchip"></div><div class="fighter left" id="fA"></div><div class="fighter right" id="fB"></div></div><div class="callout" id="callout" aria-live="polite"></div></div>';
   }
   function stageInit(names, species) {
     ['A', 'B'].forEach((s, i) => { $('#n' + s).textContent = names[i]; const f = $('#f' + s); f.className = 'fighter ' + (i ? 'right' : 'left'); f.innerHTML = crea(species); });
@@ -190,7 +201,8 @@
       else if (ev.name === 'Intimidate') effect = ev.maxed ? 'no effect, defense is already at the floor' : 'defense down ' + ev.defDrop;
       $('#callout').innerHTML = '<span><b>' + esc(ctx.names[att === 'A' ? 0 : 1]) + '</b> used <b class="mc-' + TYPE_NAME[ev.moveType] + '" style="color:var(--mc)">' + esc(ev.name) + '</b></span>' + src + (effect ? '<span class="soft">' + effect + '</span>' : '');
       fa.classList.add(ev.raw > 0 ? 'lunge' : 'cast');
-      if (!await wait(260)) return false;
+      if (ev.raw > 0 && !ctx.skip()) playSprite(fa, ctx.speed(), ctx.id);
+      if (!await wait(230)) return false;
       if (ev.raw > 0) { fd.classList.add('hit'); pop(def, '-' + ev.dmg, ev.crit ? 'crit' : 'dmg'); }
       else if (ev.name === 'Intimidate') pop(def, ev.maxed ? 'no effect' : 'DEF -' + ev.defDrop, 'debuff');
       vm[def].hp = def === 'A' ? ev.hpA : ev.hpB; vm[def].def -= ev.defDrop; vm[def].debuff += ev.debuffAdded;
