@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>engine browser check</title></head><body>
+<script src="../docs/js/engine.js"></script><script src="../docs/js/selfcheck.js"></script><script src="../docs/js/expected.js"></script>
+<script>
+(async () => {
+  try {
+    const t0 = performance.now();
+    const res = await fetch('../docs/assets/brain.bin');
+    const buf = await res.arrayBuffer();
+    const t1 = performance.now();
+    const model = CapmonEngine.createModel(buf);
+    const t2 = performance.now();
+    const r = CapmonSelfCheck.run(CapmonEngine, model, 12);
+    // timing: decisions per second for a plain student and for the full house brain
+    const E = CapmonEngine; const obs = new Array(192).fill(0.3); const tA = performance.now();
+    for (let i = 0; i < 300; i++) model.policy(obs, [1, 1, 1, 1]);
+    const msPolicy = (performance.now() - tA) / 300;
+    const tB = performance.now(); let rounds = 0;
+    for (let g = 0; g < 20; g++) rounds += E.createGame({ seed: 'time' + g, a: { species: 'Tsunami', brain: { kind: 'house', grade: '60M' } }, b: { species: 'Tsunami', brain: { kind: 'student', profile: E.newProfile() } }, model }).run().round;
+    const msGame = (performance.now() - tB) / 20;
+    window.__result = { ok: r.hash === CAPMON_EXPECTED.selfcheck && model.id === CAPMON_EXPECTED.model, hash: r.hash, expected: CAPMON_EXPECTED.selfcheck, fetchMs: Math.round(t1 - t0), loadMs: Math.round(t2 - t1), selfcheckMs: r.ms, msPolicy: +msPolicy.toFixed(2), msGame: +msGame.toFixed(1), avgRounds: rounds / 20, ua: navigator.userAgent };
+  } catch (e) { window.__result = { ok: false, error: String(e && e.stack || e) }; }
+})();
+</script></body></html>

@@ -1,0 +1,19 @@
+{
+  "file": "brain.bin",
+  "version": 1,
+  "floats": 1019524,
+  "bytes": 4078112,
+  "sha256": "ed8c83f221395fe8e09cee68f7ee10843fb3523c243d0aec0121f22cf4d323e9",
+  "source": {
+    "file": "capbot-server/brain/CapmonAI-57999998.onnx",
+    "sha256": "dffd21be811e26ea081a0537737a06fcb8dbacf8ed5f290452427dc793d73c45",
+    "producer": "pytorch 2.9.1",
+    "opset": 9
+  },
+  "mask_constants": {
+    "c0": -1.0,
+    "c1": 1.0,
+    "c2": 100000000.0
+  },
+  "dropped": "LSTM recurrent weights and forget gate (no effect with a zero initial state)"
+}
