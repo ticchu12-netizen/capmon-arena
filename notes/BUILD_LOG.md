@@ -2,18 +2,18 @@
 
 Living file. Lets any session pick up the Season 0 build without the chat history. Plan: `CAPMON_ARENA_RELEASE_PLAN_V1.md`.
 
-## Status (Nov 16, 2026, 01:40 PT)
+## Status (Nov 16, 2026, 02:40 PT)
 
 | Stage | State |
 |---|---|
 | 1. Engine | Done. All checks pass |
 | 2. Game flow | Done. Full flow passes an automated run on phone and desktop sizes |
-| 3. Look and share (sprites, stage art, share cards, sound) | Not started. Creatures are still stand-in icons |
+| 3. Look and share | Sprites and stage art are in (Nov 16). Left: share card image, share to X button, sound |
 | 4. Hardening and launch kit | Not started |
 | Hosting | Repo exists and is empty, DNS is live. **Blocked: Claude cannot push yet** (see below) |
 | Preview | Private Claude artifact, published Nov 16: https://claude.ai/artifact/Bywz1fikpMiSKcA9fbjMhP (built by `tools/bundle_artifact.py`, weights shipped as `brain.js`) |
 
-**Next action:** get the first push through, turn on GitHub Pages (main branch, `/docs` folder), then Stage 3 starting with the real sprites.
+**Next action:** when Tik says the GitHub App is installed: push (two commits are waiting in the local clone), turn on GitHub Pages (main branch, `/docs` folder), confirm arena.capmon.fun loads. Then the rest of Stage 3, then Stage 4. Also collect Tik's feedback on the preview.
 
 ## Hosting state
 
@@ -27,7 +27,8 @@ Living file. Lets any session pick up the Season 0 build without the chat histor
 
 - Durable copy: `/mnt/user-data/outputs/capmon-arena/` plus `/mnt/user-data/outputs/capmon-arena-checkpoint.tgz`. Updated by `tools/checkpoint.sh "note"`.
 - Working copy: `<scratchpad>/arena-build/`. If it is gone, unpack the tarball there.
-- Local clone for pushing: `/home/claude/capmon-arena` (copy the working tree in, minus `node_modules` and `test/out`).
+- Local clone for pushing: `/home/claude/capmon-arena` (copy the working tree in, minus `node_modules` and `test/out`). If the clone is gone: clone again, copy the tree in, commit, push.
+- Preview: `python3 tools/bundle_artifact.py <dir>` writes the one-file page plus `brain.js` and `assets/`. Publish the page with those as supporting files to keep the same artifact link.
 - Layout: `docs/` is the published site. `ref/` is the server engine and ONNX model used as reference. `test/` the checks. `tools/` scripts. `notes/` this log.
 
 ## How to re-run the checks
@@ -58,6 +59,7 @@ node tools/make_expected.js                                          # after any
 13. **Saves are local only** (`localStorage`, key `capmon-arena:v1`), repaired on load, with an in-memory fallback.
 14. **Teach mode offers three sparring partners** (Pebble, Marshal, Apex) and any matchup. The plan said "against the 60M model" only. Losing every teaching battle to the full AI is a bad first five minutes.
 15. **Site folder is `docs/`** so GitHub Pages serves only the site and not the tests.
+16. **Art.** Rageblaze and Tsunami use the 15-frame attack sheets from capmon.fun, scaled to 384 px frames. The stage is the two-island background from capmon.fun, always 16:9 so the islands stay in frame, with the HP panels above it and the move line below it. Healspike has no 2D sheet, so its sprite is made from the 3D model render by `tools/make_healspike_sprite.py` (flat colours, dark outline). It is one frame, so it lunges but does not animate. A real Healspike sheet from Tik would replace it by swapping one file.
 
 ## House roster and ratings (fit Nov 15, 5,500 matches, 13,237 games)
 
@@ -87,7 +89,7 @@ node tools/make_expected.js                                          # after any
 ## Open items
 
 - First push and Pages (blocked on GitHub App access).
-- Stage 3: Rageblaze and Tsunami sprite sheets from capmon.fun, Healspike render, stage background, share card image, X share button, sound.
+- Stage 3, rest: share card image, share to X button, sound with a mute switch.
 - Stage 4: content security policy, offline cache, analytics hook, launch thread, clips, FAQ, WordPress snippet.
 - Not tested here: Firefox and Safari. The in-page device test (Check tab) will tell on a real phone.
 - `StudentBrain.cs` as .txt would settle decisions 6 and 8.
@@ -105,3 +107,5 @@ node tools/make_expected.js                                          # after any
 | Nov 15, 21:45 | House ratings fit | 5,500 matches |
 | Nov 15, 22:05 | End-to-end flow, phone and desktop | 29 of 29 steps pass on each, no page errors |
 | Nov 16, 01:30 | DNS and repo check | DNS live, repo readable, push refused |
+| Nov 16, 02:10 | Preview bundle | Published as a private artifact. Full flow passes on the bundle |
+| Nov 16, 02:35 | Sprites and stage art | Full flow passes again, phone and desktop, no page errors. Preview updated |
