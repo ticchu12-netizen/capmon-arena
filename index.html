@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capmon Arena</title>
+<meta name="description" content="Teach a battle brain by playing, then watch it fight ranked matches on its own. Free, in your browser, on the real Capmon World engine.">
+<meta name="theme-color" content="#05080d">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<!--BODY-BEGIN-->
+<div class="app">
+  <header class="topbar"><div class="wrap topbar-inner">
+    <button class="brand" data-act="nav" data-view="arena"><span class="brand-mark" aria-hidden="true"></span>CAPMON ARENA</button>
+    <span class="season">Season 0</span>
+  </div></header>
+  <nav class="tabbar" id="tabbar" aria-label="Sections"><div class="wrap tabbar-inner">
+    <button data-act="nav" data-view="arena">Arena</button>
+    <button data-act="nav" data-view="teach">Teach</button>
+    <button data-act="nav" data-view="brain">Brain</button>
+    <button data-act="nav" data-view="ladder">Ladder</button>
+    <button data-act="nav" data-view="check">Check</button>
+  </div></nav>
+  <main class="wrap" id="view"><div class="loading"><div class="spin"></div><div>Loading</div></div></main>
+  <footer class="wrap foot">Capmon Arena, Season 0. Free to play. No account and no wallet. Your brain is saved in this browser only. Part of <a href="https://capmon.fun" target="_blank" rel="noopener">Capmon World</a>.</footer>
+</div>
+<div class="overlay" id="overlay" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<!--BODY-END-->
+<script src="js/engine.js"></script>
+<script src="js/game.js"></script>
+<script src="js/store.js"></script>
+<script src="js/selfcheck.js"></script>
+<script src="js/expected.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
