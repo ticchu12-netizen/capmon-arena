@@ -38,6 +38,19 @@
     tick();
   }
   const myRef = () => G.studentRef(state.name, state.starter, state.brain);
+  const FX = window.CapmonFX.FX, SFX = window.CapmonFX.SFX;
+  const KIND = species => TYPE_NAME[E.SPECIES[species].type];
+  const SND = ['M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8v8a4.5 4.5 0 002.5-4zM14 3.2v2.1a7 7 0 010 13.4v2.1a9 9 0 000-17.6z', 'M3 9v6h4l5 5V4L7 9H3zm18.6.4L20.2 8l-2.7 2.7L14.8 8l-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4-2.7-2.7 2.7-2.7z'];
+  function syncSound() {
+    const b = $('#sound-btn');
+    if (b) { b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + SND[state.settings.sound ? 0 : 1] + '"/></svg>'; b.setAttribute('aria-pressed', String(state.settings.sound)); b.title = state.settings.sound ? 'Sound on' : 'Sound off'; }
+    SFX.on(state.settings.sound);
+  }
+  function countUp(el, from, to) {
+    if (!el) return;
+    const t0 = performance.now(), step = now => { if (!el.isConnected) return; const k = Math.min(1, (now - t0) / 900); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
   const moveType = (species, i) => (i === 1 || i === 3 ? TYPE_NAME[E.SPECIES[species].type] : 'Normal');
   let toastTimer = 0;
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600); }
@@ -57,6 +70,7 @@
     if (live) { t.id = runId; t.busy = false; teachSettle(); }
     try { if (VIEWS.indexOf(view) >= 0 && location.hash !== '#' + view) history.replaceState(null, '', '#' + view); } catch (e) { /* preview frames may refuse */ }
     render();
+    const v = $('#view'); v.classList.remove('enter'); void v.offsetWidth; v.classList.add('enter');
     if (live) teachRestore();
     window.scrollTo(0, 0);
   }
@@ -64,7 +78,7 @@
     const tab = ui.view === 'watch' ? (ui.watch && ui.watch.from) || 'arena' : ui.view;
     document.querySelectorAll('#tabbar button').forEach(b => { if (b.dataset.view === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     const v = $('#view');
-    if (!model) { v.innerHTML = ui.loadError ? '<div class="loading"><h2>The brain did not load</h2><p class="soft">' + esc(ui.loadError) + '</p><button class="btn primary" data-act="reload">Try again</button></div>' : '<div class="loading"><div class="spin"></div><div>Loading the brain<br><span class="dim small" id="load-note">4 MB, one time</span></div></div>'; return; }
+    if (!model) { v.innerHTML = ui.loadError ? '<div class="loading"><h2>The brain did not load</h2><p class="soft">' + esc(ui.loadError) + '</p><button class="btn primary" data-act="reload">Try again</button></div>' : '<div class="loading"><div class="logo">Capmon<br>Arena</div><div class="loadbar"><i></i></div><div class="dim">Waking the brain</div></div>'; return; }
     v.innerHTML = ({ arena: viewArena, teach: viewTeach, brain: viewBrain, ladder: viewLadder, check: viewCheck, watch: viewWatch }[ui.view] || viewArena)();
   }
 
@@ -72,11 +86,12 @@
   function showOnboarding(after) {
     ui.ob = ui.ob || { starter: state.starter, after: null };
     if (after) ui.ob.after = after;
+    const sbars = n => { const sp = E.SPECIES[n], r = (k, v, max) => '<span>' + k + '</span><u><i style="width:' + Math.round(v / max * 100) + '%"></i></u>'; return '<div class="sbars">' + r('HP', sp.maxHP, 400) + r('ATK', sp.attack, 105) + r('DEF', sp.defense, 80) + r('SPD', sp.speed, 115) + '</div>'; };
     const blurb = { Rageblaze: 'Fire. Fast, hits hard, thin armor.', Tsunami: 'Water. Slow, tough, speeds up.', Healspike: 'Grass. Heals a little each round.' };
     openOverlay('<form class="stack" id="ob-form"><div><div class="eyebrow accent">Capmon Arena, Season 0</div><h1>Teach a brain. Watch it fight.</h1></div>' +
       '<p class="soft">Your brain starts with the instincts of the real Capmon World battle AI. You teach it your habits by playing. Then it plays ranked matches without you.</p>' +
       '<div class="field"><label for="ob-name">Name your brain</label><input class="input" id="ob-name" maxlength="16" autocomplete="off" placeholder="16 characters max" value="' + esc(ui.ob.name || '') + '"></div>' +
-      '<div class="field"><label>Pick a starter</label><div class="starters">' + G.SPECIES.map(s => '<button type="button" class="starter" data-act="ob-starter" data-s="' + s + '" aria-pressed="' + (ui.ob.starter === s) + '">' + crea(s) + '<b>' + s + '</b><span>' + blurb[s] + '</span></button>').join('') + '</div></div>' +
+      '<div class="field"><label>Pick a starter</label><div class="starters">' + G.SPECIES.map(s => '<button type="button" class="starter" data-act="ob-starter" data-s="' + s + '" aria-pressed="' + (ui.ob.starter === s) + '">' + crea(s) + '<b>' + s + '</b>' + sbars(s) + '<span>' + blurb[s] + '</span></button>').join('') + '</div></div>' +
       '<p class="note" id="ob-err" hidden></p><button class="btn primary wide" type="submit">Start</button>' +
       '<p class="dim small">Free. No account, no wallet. Everything is saved in this browser only.</p></form>');
   }
@@ -96,9 +111,9 @@
   }
   function brainCard() {
     const p = S.profileOf(state), s = G.brainSummary(p);
-    return '<section class="panel stack"><div class="row between"><div class="who">' + crea(state.starter, 'big') + '<div class="grow"><div class="name ellip">' + esc(state.name) + '</div><div class="row" style="gap:6px"><span class="chip gold">' + G.tierOf(state.rating) + '</span><span class="rating">' + state.rating + '</span></div></div></div>' +
-      '<button class="btn small ghost" data-act="nav" data-view="brain">Open brain</button></div>' +
-      '<div class="stats"><div class="stat"><b>' + s.habits + '</b><span>habits formed</span></div><div class="stat"><b>' + s.covered + '<small class="dim" style="font-size:14px"> / ' + s.target + '</small></b><span>situations learned</span></div><div class="stat"><b>' + pct(s.randomness) + '</b><span>random moves</span></div><div class="stat"><b>' + state.ranked.won + '-' + (state.ranked.played - state.ranked.won) + '</b><span>ranked record</span></div></div></section>';
+    return '<section class="panel stack"><div class="hero-art">' + crea(state.starter) + '<div class="hero-tag"><div class="hero-name ellip">' + esc(state.name) + '</div><div class="emblem"><b>' + state.rating + '</b><span>' + G.tierOf(state.rating) + '</span></div></div></div>' +
+      '<div class="stats"><div class="stat"><b>' + s.habits + '</b><span>habits formed</span></div><div class="stat"><b>' + s.covered + '<small class="dim" style="font-size:14px"> / ' + s.target + '</small></b><span>situations learned</span></div><div class="stat"><b>' + pct(s.randomness) + '</b><span>random moves</span></div><div class="stat"><b>' + state.ranked.won + '-' + (state.ranked.played - state.ranked.won) + '</b><span>ranked record</span></div></div>' +
+      '<div class="row between"><span class="dim small">The 58M-step Capmon model plus your habits</span><button class="btn small ghost" data-act="nav" data-view="brain">Open brain</button></div></section>';
   }
   function matchRow(rec, label, attrs) {
     const res = rec.seen ? '<span class="chip ' + (rec.won ? 'win' : 'loss') + '">' + (rec.won ? 'Won ' : 'Lost ') + esc(rec.score) + '</span>' + (rec.k === 'r' ? '<span class="mono ' + (rec.r1 >= rec.r0 ? 't-Healspike' : 'dim') + '">' + (rec.r1 >= rec.r0 ? '+' : '') + (rec.r1 - rec.r0) + '</span>' : '') : '<span class="chip accent">Result hidden</span>';
@@ -117,7 +132,7 @@
     const unseen = card.done.some(r => r && !r.seen);
     let cta;
     if (ui.busy) cta = '<button class="btn primary wide" disabled>' + esc(ui.busy) + '</button>';
-    else if (played < 3) cta = (untaught ? '<p class="note accent">Your brain has not been taught yet. It will play on instinct and random moves. <button class="btn small" data-act="nav" data-view="teach" style="margin-left:6px">Teach first</button></p>' : '') + '<button class="btn primary wide" data-act="play-card">Play today\'s 3 ranked matches</button><p class="dim small">Your brain plays alone, as it is right now. First to two games wins a match. Both sides use the same creature in each game, so the brain decides it.</p>';
+    else if (played < 3) cta = (untaught ? '<p class="note accent">Your brain has not been taught yet. It will play on instinct and random moves. <button class="btn small" data-act="nav" data-view="teach" style="margin-left:6px">Teach first</button></p>' : '') + '<button class="btn primary wide big" data-act="play-card">Fight today\'s 3 matches</button><p class="dim small">Your brain plays alone, as it is right now. First to two games wins a match. Both sides use the same creature in each game, so the brain decides it.</p>';
     else cta = '<p class="note">Today\'s matches are done. New opponents tomorrow. Until then, teach your brain or challenge a friend.</p>' + (unseen ? '<button class="btn small ghost" data-act="reveal-card">Show all results</button>' : '');
     const recent = recentRecords().slice(0, 6);
     const share = CFG.links === 'hash' ? 'They open the link and their brain plays yours in their browser.' : 'They paste the code under Open a code and their brain plays yours.';
@@ -156,7 +171,7 @@
   function ladderPanel(limit) {
     const rows = G.standings(state.onboarded ? { name: state.name, starter: state.starter, rating: state.rating } : null);
     return '<section class="panel"><span class="eyebrow">Season 0 ladder</span><div class="list">' + rows.slice(0, limit || rows.length).map(r =>
-      '<div class="item' + (r.house ? '' : ' me') + '"><span class="rank">' + r.rank + '</span>' + crea(r.starter) + '<div class="meta"><div class="t"><span class="ellip">' + esc(r.name) + '</span><span class="chip' + (r.house ? '' : ' accent') + '">' + (r.house ? r.tier : 'You, ' + r.tier) + '</span></div>' + (r.house ? '<div class="s">' + esc(r.bio) + '</div>' : '<div class="s">Peak ' + state.peak + '. ' + state.ranked.played + ' ranked matches.</div>') + '</div><span class="rating">' + r.rating + '</span></div>').join('') + '</div></section>';
+      '<div class="item' + (r.house ? '' : ' me') + '"><span class="rank' + (r.rank <= 3 ? ' r' + r.rank : '') + '">' + r.rank + '</span>' + crea(r.starter) + '<div class="meta"><div class="t"><span class="ellip">' + esc(r.name) + '</span><span class="chip' + (r.house ? '' : ' accent') + '">' + (r.house ? r.tier : 'You, ' + r.tier) + '</span></div>' + (r.house ? '<div class="s">' + esc(r.bio) + '</div>' : '<div class="s">Peak ' + state.peak + '. ' + state.ranked.played + ' ranked matches.</div>') + '</div><span class="rating">' + r.rating + '</span></div>').join('') + '</div></section>';
   }
   function viewLadder() {
     return '<div class="stack"><div><h1>Ladder</h1><p class="soft">Ten house brains, rated from 5,500 matches against each other. Your brain starts at 1000, the rating of an untaught brain, and moves with every ranked match.</p></div>' + ladderPanel() +
@@ -165,55 +180,84 @@
 
   // ---------- the stage ----------
   function stageHTML() {
-    return '<div class="stagebox"><div class="hudrow"><div class="hud left"><div class="n ellip" id="nA"></div><div class="hp" id="hpA"><i></i></div><div class="v" id="vA"></div></div><div class="hud right"><div class="n ellip" id="nB"></div><div class="hp" id="hpB"><i></i></div><div class="v" id="vB"></div></div></div>' +
-      '<div class="stage" id="stage"><div class="roundchip" id="roundchip"></div><div class="fighter left" id="fA"></div><div class="fighter right" id="fB"></div></div><div class="callout" id="callout" aria-live="polite"></div></div>';
+    const hud = (s, cls) => '<div class="hud ' + cls + '"><div class="hud-top"><span class="n ellip" id="n' + s + '"></span><span class="hud-ty" id="ty' + s + '"></span><span class="hpn" id="hpn' + s + '"></span></div><div class="hp" id="hp' + s + '"><b></b><i></i></div><div class="v" id="v' + s + '"></div></div>';
+    return '<div class="stagebox"><div class="hudrow">' + hud('A', 'left') + '<div class="roundchip" id="roundchip"></div>' + hud('B', 'right') + '</div>' +
+      '<div class="stage" id="stage"><canvas class="fx"></canvas><div class="fighter left" id="fA"></div><div class="fighter right" id="fB"></div><div class="flash"></div></div><div class="callout" id="callout" aria-live="polite"></div></div>';
   }
-  function stageInit(names, species) {
-    ['A', 'B'].forEach((s, i) => { $('#n' + s).textContent = names[i]; const f = $('#f' + s); f.className = 'fighter ' + (i ? 'right' : 'left'); f.innerHTML = crea(species); });
-    $('#callout').innerHTML = ''; const b = $('#stage .banner'); if (b) b.remove();
+  function stageInit(names, spA, spB) {
+    [['A', spA], ['B', spB || spA]].forEach((x, i) => {
+      const k = KIND(x[1]), ty = $('#ty' + x[0]), f = $('#f' + x[0]);
+      $('#n' + x[0]).textContent = names[i]; ty.textContent = k; ty.className = 'hud-ty mc-' + k;
+      f.className = 'fighter ' + (i ? 'right' : 'left'); f.style.removeProperty('--dash'); f.innerHTML = crea(x[1]);
+    });
+    $('#callout').innerHTML = '';
+    document.querySelectorAll('#stage .banner, #stage .slam, #stage .vs, #stage .pop').forEach(el => el.remove());
+    FX.attach($('#stage')); FX.ambient(KIND(spA), KIND(spB || spA));
   }
   function stageSnap(snap, round) {
     ['A', 'B'].forEach(s => {
-      const x = snap[s], f = x.hp / x.maxHP, bar = $('#hp' + s);
+      const x = snap[s], f = Math.max(0, x.hp / x.maxHP), bar = $('#hp' + s);
       if (!bar) return;
-      bar.className = 'hp' + (f <= 0.25 ? ' low' : f <= 0.5 ? ' mid' : ''); bar.firstChild.style.width = Math.max(0, f * 100) + '%';
-      $('#v' + s).innerHTML = '<span>' + x.hp + '/' + x.maxHP + '</span><span class="' + (x.def < x.baseDef ? 'down' : x.def > x.baseDef ? 'up' : '') + '">DEF ' + x.def + '</span><span class="' + (x.spd > x.baseSpd ? 'up' : '') + '">SPD ' + x.spd + '</span>';
+      bar.className = 'hp' + (f <= 0.25 ? ' low' : f <= 0.5 ? ' mid' : ''); bar.children[0].style.width = bar.children[1].style.width = (f * 100) + '%';
+      $('#hpn' + s).innerHTML = x.hp + '<small>/' + x.maxHP + '</small>';
+      $('#v' + s).innerHTML = '<span class="' + (x.def < x.baseDef ? 'down' : x.def > x.baseDef ? 'up' : '') + '">DEF ' + x.def + '</span><span class="' + (x.spd > x.baseSpd ? 'up' : '') + '">SPD ' + x.spd + '</span>';
       $('#f' + s).classList.toggle('down', x.hp <= 0);
     });
-    if (round != null) $('#roundchip').textContent = 'Round ' + round;
+    if (round != null) $('#roundchip').innerHTML = '<small>ROUND</small><b>' + round + '</b>';
   }
   function pop(side, text, cls) {
     const st = $('#stage'); if (!st) return;
-    const el = document.createElement('div'); el.className = 'pop ' + (side === 'A' ? 'left' : 'right') + ' ' + cls; el.textContent = text; st.appendChild(el);
-    setTimeout(() => el.remove(), 950);
+    const q = FX.at(side), el = document.createElement('div');
+    el.className = 'pop ' + cls; el.textContent = text; el.style.left = Math.round(q.x) + 'px'; el.style.top = Math.max(2, Math.round(q.top - 12)) + 'px';
+    st.appendChild(el); setTimeout(() => el.remove(), 980);
   }
-  /** Plays one round record on the stage. ctx = { id, names, speed(), skip } */
+  /** Plays one round record on the stage. A failed effect must never stall a battle, so errors end the animation, not the game. */
   async function animRound(rec, ctx) {
+    try { return await animRoundFx(rec, ctx); } catch (e) { if (window.console) console.error('effect error', e); return ctx.id === runId && !!$('#stage'); }
+  }
+  async function animRoundFx(rec, ctx) {
     const ok = () => ctx.id === runId && $('#stage');
     const wait = async ms => { if (!ctx.skip()) await sleep(ms / ctx.speed()); return ok(); };
     const vm = { A: Object.assign({}, rec.pre.A), B: Object.assign({}, rec.pre.B) };
     stageSnap(vm, rec.t);
     for (const ev of rec.events) {
-      const att = ev.side, def = att === 'A' ? 'B' : 'A', fa = $('#f' + att), fd = $('#f' + def);
+      const att = ev.side, def = att === 'A' ? 'B' : 'A', fa = $('#f' + att), fd = $('#f' + def), kind = TYPE_NAME[ev.moveType], ult = ev.mi === 3, show = !ctx.skip();
       const src = ev.src === 'HUMAN' ? '' : ' <span class="chip src-' + ev.src + '">' + SRC_LABEL[ev.src] + '</span>';
       let effect = '';
       if (ev.raw > 0 || ev.dmg > 0) effect = (ev.crit ? 'Critical hit, ' : '') + ev.dmg + ' damage';
       else if (ev.name === 'Intimidate') effect = ev.maxed ? 'no effect, defense is already at the floor' : 'defense down ' + ev.defDrop;
-      $('#callout').innerHTML = '<span><b>' + esc(ctx.names[att === 'A' ? 0 : 1]) + '</b> used <b class="mc-' + TYPE_NAME[ev.moveType] + '" style="color:var(--mc)">' + esc(ev.name) + '</b></span>' + src + (effect ? '<span class="soft">' + effect + '</span>' : '');
-      fa.classList.add(ev.raw > 0 ? 'lunge' : 'cast');
-      if (ev.raw > 0 && !ctx.skip()) playSprite(fa, ctx.speed(), ctx.id);
-      if (!await wait(230)) return false;
-      if (ev.raw > 0) { fd.classList.add('hit'); pop(def, '-' + ev.dmg, ev.crit ? 'crit' : 'dmg'); }
-      else if (ev.name === 'Intimidate') pop(def, ev.maxed ? 'no effect' : 'DEF -' + ev.defDrop, 'debuff');
+      $('#callout').innerHTML = '<span><b>' + esc(ctx.names[att === 'A' ? 0 : 1]) + '</b> used <b class="mc-' + kind + '" style="color:var(--mc)">' + esc(ev.name) + '</b></span>' + src + (effect ? '<span class="soft">' + effect + '</span>' : '');
+      const pa = FX.at(att), pd = FX.at(def);
+      if (show) {                                   // wind-up, different for each kind of move
+        if (ev.name === 'Intimidate') { fa.classList.add('cast'); FX.roar(pa, pd); SFX.roar(); if (!await wait(320)) return false; }
+        else if (ev.mi === 0) { fa.style.setProperty('--dash', Math.round((pd.x - pa.x) * 0.74) + 'px'); fa.classList.add('dash'); SFX.whoosh(); if (!await wait(170)) return false; }
+        else if (ult) { FX.flash('dark'); FX.charge(pa, kind, 0.42); SFX.charge(); fa.classList.add('cast'); if (!await wait(440)) return false; playSprite(fa, ctx.speed(), ctx.id); FX.beam(pa, pd, kind, 0.34); if (!await wait(230)) return false; }
+        else { playSprite(fa, ctx.speed(), ctx.id); fa.classList.add('lunge'); SFX[kind === 'Fire' ? 'fire' : kind === 'Water' ? 'water' : 'leaf'](); if (!await wait(190)) return false; FX.projectile(pa, pd, kind, 0.2 / ctx.speed()); if (!await wait(200)) return false; }
+      }
       vm[def].hp = def === 'A' ? ev.hpA : ev.hpB; vm[def].def -= ev.defDrop; vm[def].debuff += ev.debuffAdded;
-      stageSnap(vm, rec.t);
-      if (!await wait(360)) return false;
-      fa.classList.remove('lunge', 'cast'); fd.classList.remove('hit');
-      if (!await wait(ev.ko ? 500 : 380)) return false;
+      stageSnap(vm, rec.t);                         // the move lands
+      if (show && !ctx.skip()) {
+        if (ev.raw > 0) {
+          fd.classList.add('hit'); pop(def, '-' + ev.dmg, (ev.crit ? 'crit' : 'dmg') + (ult ? ' big' : ''));
+          FX.burst(pd.x, pd.y, ev.crit ? 'Gold' : kind, ult ? 48 : 24, ult ? 430 : 300); FX.ring(pd.x, pd.y, kind, ult ? 160 : 84, 0.36, ult ? 11 : 6);
+          FX.shake(ult || ev.crit ? 'l' : 'm'); if (ult || ev.crit) FX.flash('white');
+          if (ev.crit) { FX.slam('CRITICAL!', 'gold'); SFX.crit(); } else if (ult) SFX.boom(); else SFX.hit();
+        } else if (ev.name === 'Intimidate') {
+          pop(def, ev.maxed ? 'NO EFFECT' : 'DEF -' + ev.defDrop, 'debuff');
+          if (!ev.maxed) { fd.classList.add('cower'); FX.sparkle(pd, 'Mind', 14, true); SFX.down(); }
+        }
+      }
+      if (!await wait(ev.crit || ult ? 210 : 120)) return false;       // hit-stop
+      fa.classList.remove('lunge', 'cast', 'dash'); fd.classList.remove('hit', 'cower');
+      if (ev.ko && show && !ctx.skip()) { FX.slam('K.O.', 'ko'); SFX.ko(); FX.dust(pd.x, pd.foot); FX.shake('l'); FX.zoom(def, 900 / ctx.speed()); }
+      if (!await wait(ev.ko ? 950 : 340)) return false;
     }
-    for (const p of rec.passives) pop(p.side, p.kind === 'heal' ? '+' + p.amount + ' HP' : p.kind === 'speed' ? '+' + p.amount + ' SPD' : '+' + p.amount + ' DEF', 'buff');
+    if (!ctx.skip()) {
+      for (const p of rec.passives) { pop(p.side, p.kind === 'heal' ? '+' + p.amount + ' HP' : p.kind === 'speed' ? 'SPD +' + p.amount : 'DEF +' + p.amount, 'buff'); FX.sparkle(FX.at(p.side), p.kind === 'heal' ? 'Grass' : p.kind === 'speed' ? 'Water' : 'Fire', 9, false); }
+      if (rec.passives.length) SFX.buff();
+    }
     stageSnap(rec.post, rec.t);
-    if (rec.passives.length && !await wait(420)) return false;
+    if (rec.passives.length && !await wait(400)) return false;
     return ok();
   }
   function whySide(name, species, d) {
@@ -242,6 +286,14 @@
   }
   function banner(html) { const st = $('#stage'); if (!st) return; const old = $('#stage .banner'); if (old) old.remove(); const b = document.createElement('div'); b.className = 'banner'; b.innerHTML = html; st.appendChild(b); }
 
+  function vsIntro(names, spA, spB, label) {
+    const st = $('#stage'); if (!st) return;
+    const el = document.createElement('div'); el.className = 'vs';
+    el.style.setProperty('--ca', 'var(--' + KIND(spA).toLowerCase() + ')'); el.style.setProperty('--cb', spA === spB ? 'var(--violet)' : 'var(--' + KIND(spB).toLowerCase() + ')');
+    el.innerHTML = '<div class="vs-side l">' + crea(spA) + '<b>' + esc(names[0]) + '</b></div><div class="vs-mid"><small>' + esc(label) + '</small><i>VS</i></div><div class="vs-side r">' + crea(spB) + '<b>' + esc(names[1]) + '</b></div>';
+    st.appendChild(el); SFX.vs();
+  }
+
   // ---------- watch a match ----------
   function startWatch(rec, where) {
     let m; try { m = G.decodeMatchCode(rec.code); } catch (e) { toast('This match record cannot be read'); return; }
@@ -255,52 +307,56 @@
     const dots = [0, 1, 2].map(i => '<i class="' + (w.wins[i] || '') + (i === w.gi && !w.done ? ' now' : '') + '"></i>').join('');
     const sp = state.settings.speed;
     return '<div class="stack"><div class="stack tight"><div class="row between"><span class="eyebrow accent">' + (w.rec.k === 'r' ? 'Ranked match' : w.rec.k === 'c' ? 'Challenge match' : 'Shared match') + '</span><span class="row"><span class="dim small" id="game-label"></span><span class="dots" aria-label="Games won">' + dots + '</span></span></div><h2>' + esc(w.names[0]) + ' <span class="dim">vs</span> ' + esc(w.names[1]) + '</h2></div>' +
-      '<div>' + stageHTML() + '</div><div id="watch-under"><div class="controls"><button class="btn small" data-act="w-pause" id="w-pause">Pause</button><div class="seg" role="group" aria-label="Speed">' + [1, 2, 4].map(x => '<button data-act="w-speed" data-x="' + x + '" aria-pressed="' + (sp === x) + '">' + x + 'x</button>').join('') + '</div><button class="btn small ghost" data-act="w-skip-game">Skip game</button><button class="btn small ghost" data-act="w-skip-all">Skip to result</button></div></div>' +
+      '<div>' + stageHTML() + '</div><div id="watch-under"><div class="controls"><button class="btn small" data-act="w-pause" id="w-pause">Pause</button><button class="btn small" data-act="w-speed">Speed ' + sp + 'x</button><button class="btn small ghost" data-act="w-skip-game">Skip game</button><button class="btn small ghost" data-act="w-skip-all">Skip all</button></div></div>' +
       '<section class="panel"><span class="eyebrow">Why this move</span><div class="why" id="why"><p class="dim">Each round shows what the model wanted and what changed it.</p></div></section></div>';
   }
   async function runWatch(id) {
     const w = ui.watch, ctx = { id: id, names: w.names, speed: () => state.settings.speed, skip: () => w.skipGame || w.skipAll };
     const alive = () => id === runId && ui.watch === w && $('#stage');
     const hold = async ms => { let left = ms; while (left > 0 && alive() && !ctx.skip()) { await sleep(40); if (!w.paused) left -= 40 * ctx.speed(); } return alive(); };
+    const setDots = now => document.querySelectorAll('.dots i').forEach((el, i) => { el.className = (w.wins[i] || '') + (i === now ? ' now' : ''); });
     let wa = 0, wb = 0;
     for (let gi = 0; gi < 3 && wa < 2 && wb < 2; gi++) {
       w.gi = gi; w.skipGame = false;
       const species = w.order[gi], game = G.createMatchGame(w.m, gi, model);
       if (!alive()) return;
       $('#game-label').textContent = 'Game ' + (gi + 1) + ', ' + species + ' vs ' + species;
-      document.querySelectorAll('.dots i').forEach((el, i) => { el.className = (w.wins[i] || '') + (i === gi ? ' now' : ''); });
-      stageInit(w.names, species); stageSnap({ A: E.snapshot(game.fighters.A), B: E.snapshot(game.fighters.B) }, 1);
-      banner('<span class="eyebrow accent">Game ' + (gi + 1) + '</span><b>' + species + ' vs ' + species + '</b><span class="soft small">Same creature on both sides. The brain decides it.</span>');
-      if (!await hold(1100)) return;
-      const bn = $('#stage .banner'); if (bn) bn.remove();
+      setDots(gi);
+      stageInit(w.names, species, species); stageSnap({ A: E.snapshot(game.fighters.A), B: E.snapshot(game.fighters.B) }, 1);
+      if (!ctx.skip()) {
+        vsIntro(w.names, species, species, 'Game ' + (gi + 1));
+        if (!await hold(1500)) return;
+        document.querySelectorAll('#stage .vs').forEach(el => el.remove());
+        if (!ctx.skip()) { FX.slam('FIGHT!'); SFX.fight(); if (!await hold(650)) return; }
+      }
       while (!game.over) {
         while (w.paused && alive() && !ctx.skip()) await sleep(80);
         if (!alive()) return;
         const rec = game.playRound();
         if (!ctx.skip()) {
           $('#why').innerHTML = whySide(w.names[0], species, rec.dA) + whySide(w.names[1], species, rec.dB);
-          if (!await animRound(rec, ctx)) { if (!alive()) return; }
+          if (!await animRound(rec, ctx) && !alive()) return;
         }
       }
       if (!alive()) return;
+      document.querySelectorAll('#stage .vs').forEach(el => el.remove());
       stageSnap({ A: E.snapshot(game.fighters.A), B: E.snapshot(game.fighters.B) }, game.round);
       if (game.winner === 'A') wa++; else wb++;
-      w.wins += game.winner;
-      document.querySelectorAll('.dots i').forEach((el, i) => { el.className = w.wins[i] || ''; });
-      banner('<span class="eyebrow">Game ' + (gi + 1) + (game.timeout ? ', time ran out' : '') + '</span><b>' + esc(w.names[game.winner === 'A' ? 0 : 1]) + ' wins</b><span class="soft small">' + game.round + ' rounds. Games: ' + wa + '-' + wb + '</span>');
+      w.wins += game.winner; setDots(-1);
+      banner('<span class="eyebrow">Game ' + (gi + 1) + (game.timeout ? ', time ran out' : '') + '</span><b>' + esc(w.names[game.winner === 'A' ? 0 : 1]) + ' wins</b><span class="soft small">' + game.round + ' rounds. Games ' + wa + '-' + wb + '</span>');
       if (!w.skipAll && !await hold(1500)) return;
     }
     if (!alive()) return;
     w.done = true;
     if (!w.rec.seen) { w.rec.seen = true; save(); }
-    const won = (w.rec.me === 'A') === (wa > wb), mine = w.rec.k !== 'v';
-    const next = nextUnseen();
-    const consistent = w.wins === w.m.winners;
-    $('#watch-under').innerHTML = '<section class="panel result"><span class="eyebrow">' + (mine ? (won ? 'Your brain won' : 'Your brain lost') : 'Final') + '</span><div class="score ' + (mine ? (won ? 'win' : 'loss') : '') + '">' + wa + ' - ' + wb + '</div>' +
-      (w.rec.k === 'r' ? '<div class="row" style="justify-content:center"><span class="chip gold">' + G.tierOf(w.rec.r1) + '</span><span class="rating">' + w.rec.r0 + ' to ' + w.rec.r1 + ' (' + (w.rec.r1 >= w.rec.r0 ? '+' : '') + (w.rec.r1 - w.rec.r0) + ')</span></div>' : '') +
+    const won = (w.rec.me === 'A') === (wa > wb), mine = w.rec.k !== 'v', next = nextUnseen(), consistent = w.wins === w.m.winners, delta = w.rec.r1 - w.rec.r0;
+    if (mine && won) { FX.confetti(); SFX.win(); } else if (mine) SFX.lose();
+    $('#watch-under').innerHTML = '<section class="panel result ' + (mine ? (won ? 'win' : 'loss') : '') + '"><div class="verdict' + (mine ? '' : ' plain') + '">' + (mine ? (won ? 'Victory' : 'Defeat') : 'Final') + '</div><div class="score">' + wa + ' - ' + wb + '</div>' +
+      (w.rec.k === 'r' ? '<div class="row" style="justify-content:center"><span class="chip gold">' + G.tierOf(w.rec.r1) + '</span><span class="rating" id="rate-count">' + w.rec.r0 + '</span><span class="gain ' + (delta >= 0 ? 'up' : 'dn') + '">' + (delta >= 0 ? '+' : '') + delta + '</span></div>' : '') +
       (consistent ? '' : '<p class="note bad">This replay did not match the result claimed in the code.</p>') +
       '<div class="row" style="justify-content:center">' + (next ? '<button class="btn primary" data-act="watch-next">Next match</button>' : '') + '<button class="btn" data-act="copy-match">Copy match ' + (CFG.links === 'hash' ? 'link' : 'code') + '</button><button class="btn ghost" data-act="w-again">Watch again</button><button class="btn ghost" data-act="nav" data-view="' + (mine ? 'arena' : 'check') + '">Back</button></div>' +
       (mine && !won ? '<p class="dim small">Lost on a habit you do not like? Teach that situation again. Habits can be overwritten.</p>' : '') + '</section>';
+    if (w.rec.k === 'r') countUp($('#rate-count'), w.rec.r0, w.rec.r1);
   }
   function nextUnseen() { const c = state.days[S.today()]; if (!c) return null; for (let i = 0; i < 3; i++) if (c.done[i] && !c.done[i].seen) return { rec: c.done[i], where: { day: S.today(), slot: i } }; return null; }
 
@@ -327,7 +383,7 @@
   }
   function teachDone() {
     const t = ui.teach, won = t.game.winner === 'A', s = G.brainSummary(S.profileOf(state));
-    return '<section class="panel result"><span class="eyebrow">' + (won ? 'You won' : 'You lost') + ' in ' + t.game.round + ' rounds</span><div class="stats" style="width:100%"><div class="stat"><b>' + t.count + '</b><span>moves taught</span></div><div class="stat"><b>+' + t.newCovered + '</b><span>situations learned</span></div><div class="stat"><b>' + s.habits + '</b><span>habits in total</span></div></div>' +
+    return '<section class="panel result ' + (won ? 'win' : 'loss') + '"><div class="verdict">' + (won ? 'You won' : 'You lost') + '</div><span class="eyebrow">' + t.game.round + ' rounds</span><div class="stats" style="width:100%"><div class="stat"><b>' + t.count + '</b><span>moves taught</span></div><div class="stat"><b>+' + t.newCovered + '</b><span>situations learned</span></div><div class="stat"><b>' + s.habits + '</b><span>habits in total</span></div></div>' +
       '<div class="row" style="justify-content:center"><button class="btn primary" data-act="t-again">Teach again</button><button class="btn" data-act="nav" data-view="arena">Go to the arena</button><button class="btn ghost" data-act="nav" data-view="brain">See the brain</button></div></section>';
   }
   function teachStart() {
@@ -336,15 +392,21 @@
     Object.assign(t, { phase: 'battle', busy: false, lesson: '', count: 0, newCovered: 0, id: ++runId,
       game: E.createGame({ seed: ['teach', state.id, state.teach.salt, E.b64urlEncode(salt)].join('|'), a: { species: t.me, brain: { kind: 'human', shadow: { kind: 'spec', eps: 0 } } }, b: { species: t.opp, brain: G.ROSTER_BY_ID[t.level].brain }, model: model }) });
     render(); teachRestore();
+    vsIntro([state.name, G.ROSTER_BY_ID[t.level].name], t.me, t.opp, 'Training');
+    const id = runId;
+    setTimeout(() => { if (id !== runId || !$('#stage .vs')) return; document.querySelectorAll('#stage .vs').forEach(el => el.remove()); FX.slam('FIGHT!'); SFX.fight(); }, 1250);
   }
   async function teachMove(m) {
     const t = ui.teach; if (t.busy || !t.game || t.game.over) return;
     let rec; try { rec = t.game.playRound({ A: m }); } catch (e) { return; }
     t.busy = true;
     const p = S.profileOf(state), day = S.today(), b = rec.dA.bucket, d = G.describeBucket(b);
+    document.querySelectorAll('#stage .vs').forEach(el => el.remove());
+    const hadHabit = E.habitInfo(p, b, null).eligible;
     const fresh = E.recordTurn(p, b, m, day);
     S.setProfile(state, p); state.teach.moves++; t.count++; if (fresh) t.newCovered++; save();
     const n = E.bucketTotal(p, b), h = E.habitInfo(p, b, null), mine = p.counts[b * E.ACTIONS + m];
+    if (h.eligible && !hadHabit) { FX.slam('HABIT FORMED', 'gold'); SFX.learn(); } else if (fresh) { FX.slam('NEW SITUATION', 'cyan'); SFX.learn(); }
     let status;
     if (fresh) status = '<span class="chip win">New situation learned, ' + p.creditsToday + ' of ' + E.DAILY_CAP + ' today</span>';
     else if (!p.covered[b] && n >= E.MIN_COVER) status = '<span class="chip">Daily limit reached. It will count tomorrow</span>';
@@ -442,6 +504,7 @@
   const ACT = {
     nav: el => { const t = ui.teach; if (el.dataset.view === 'teach' && ui.view !== 'teach' && t.phase === 'done') ui.teach = { phase: 'setup', me: t.me, opp: t.opp, level: t.level }; go(el.dataset.view); },
     reload: () => location.reload(),
+    sound: () => { state.settings.sound = !state.settings.sound; save(); syncSound(); if (state.settings.sound) SFX.click(); },
     close: () => { ui.importArmed = false; closeOverlay(); },
     onboard: () => showOnboarding(),
     'ob-starter': el => { ui.ob.name = $('#ob-name').value; ui.ob.starter = el.dataset.s; showOnboarding(); },
@@ -450,7 +513,7 @@
     'watch-rec': el => { const rec = el.dataset.log != null ? state.log[+el.dataset.log] : (state.days[el.dataset.day] || { done: [] }).done[+el.dataset.slot]; if (rec) startWatch(rec, el.dataset.day ? { day: el.dataset.day, slot: +el.dataset.slot } : null); },
     'watch-next': () => { const n = nextUnseen(); if (n) startWatch(n.rec, n.where); },
     'w-pause': el => { const w = ui.watch; if (!w) return; w.paused = !w.paused; el.textContent = w.paused ? 'Play' : 'Pause'; },
-    'w-speed': el => { state.settings.speed = +el.dataset.x; save(); document.querySelectorAll('[data-act="w-speed"]').forEach(b => b.setAttribute('aria-pressed', String(b === el))); },
+    'w-speed': el => { const n = { 1: 2, 2: 4, 4: 1 }[state.settings.speed] || 1; state.settings.speed = n; save(); el.textContent = 'Speed ' + n + 'x'; },
     'w-skip-game': () => { if (ui.watch) ui.watch.skipGame = true; },
     'w-skip-all': () => { if (ui.watch) ui.watch.skipAll = true; },
     'w-again': () => { if (ui.watch) startWatch(ui.watch.rec, ui.watch.where); },
@@ -469,20 +532,20 @@
     't-quit': () => { runId++; ui.teach = { phase: 'setup', me: ui.teach.me, opp: ui.teach.opp, level: ui.teach.level }; render(); },
     'b-rel': el => { ui.brainRel = +el.dataset.r; ui.brainCell = -1; render(); },
     'b-cell': el => { ui.brainCell = +el.dataset.b; render(); },
-    'b-reset': () => { if (!ui.resetArmed) { ui.resetArmed = true; render(); setTimeout(() => { if (ui.resetArmed) { ui.resetArmed = false; if (ui.view === 'brain') render(); } }, 4000); return; } ui.resetArmed = false; S.wipe(); state = S.load(); ui.teach = { phase: 'setup' }; ui.watch = null; go('arena'); showOnboarding(); },
+    'b-reset': () => { if (!ui.resetArmed) { ui.resetArmed = true; render(); setTimeout(() => { if (ui.resetArmed) { ui.resetArmed = false; if (ui.view === 'brain') render(); } }, 4000); return; } ui.resetArmed = false; S.wipe(); state = S.load(); syncSound(); ui.teach = { phase: 'setup' }; ui.watch = null; go('arena'); showOnboarding(); },
     'check-go': () => { const text = $('#check-in').value, code = G.findCode(text); const e = $('#check-err'); if (!code || code.slice(0, 2) !== 'm1') { e.textContent = 'Paste a match code. It starts with m1.'; e.hidden = false; return; } const r = G.verifyMatchCode(code, model); if (r.error) { e.textContent = 'This code is damaged: ' + r.error + '.'; e.hidden = false; return; } ui.check = { code: code, m: G.decodeMatchCode(code), result: r }; render(); },
     'check-watch': () => { const c = ui.check; if (c) startWatch({ k: 'v', code: c.code, me: 'A', seen: true }, null); },
     selfcheck: () => { if (ui.selfBusy) return; ui.selfBusy = true; render(); setTimeout(() => { const r = window.CapmonSelfCheck.run(E, model, 12); ui.selfcheck = { ok: !!window.CAPMON_EXPECTED && r.hash === window.CAPMON_EXPECTED.selfcheck, hash: r.hash, ms: r.ms }; ui.selfBusy = false; if (ui.view === 'check') render(); }, 60); }
   };
   function teachRestore() {
     const t = ui.teach; if (!t.game || !$('#stage')) return;
-    stageInit([state.name, G.ROSTER_BY_ID[t.level].name], t.me); $('#fB').innerHTML = crea(t.opp);
+    stageInit([state.name, G.ROSTER_BY_ID[t.level].name], t.me, t.opp);
     stageSnap({ A: E.snapshot(t.game.fighters.A), B: E.snapshot(t.game.fighters.B) }, t.game.over ? t.game.round : t.game.round + 1);
-    if (t.game.over) banner('<b>' + (t.game.winner === 'A' ? 'You win' : esc(G.ROSTER_BY_ID[t.level].name) + ' wins') + '</b>');
+    if (t.game.over) { banner('<b>' + (t.game.winner === 'A' ? 'You win' : esc(G.ROSTER_BY_ID[t.level].name) + ' wins') + '</b>'); if (!t.cheered) { t.cheered = true; if (t.game.winner === 'A') { FX.confetti(); SFX.win(); } else SFX.lose(); } }
   }
   document.addEventListener('click', ev => {
     const el = ev.target.closest('[data-act]'); if (!el || el.disabled) return;
-    const fn = ACT[el.dataset.act]; if (fn) { ev.preventDefault(); fn(el); }
+    const fn = ACT[el.dataset.act]; if (fn) { ev.preventDefault(); if (el.dataset.act !== 'sound') SFX.click(); fn(el); }
   });
   document.addEventListener('submit', ev => { ev.preventDefault(); if (ev.target.id === 'ob-form') finishOnboarding(); });
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && ui.overlay && state.onboarded) closeOverlay(); });
@@ -507,6 +570,7 @@
   }
   async function boot() {
     const start = fromHash();
+    syncSound();
     if (start.view) ui.view = start.view;
     render();
     try { model = await loadModel(); } catch (e) { ui.loadError = e && e.message ? e.message : 'Unknown error.'; render(); return; }
@@ -515,6 +579,6 @@
     else if (!state.onboarded) showOnboarding();
     window.addEventListener('hashchange', () => { const h = fromHash(); if (h.code) { const err = handleCode(h.code); if (err) toast(err); } else if (h.view && h.view !== ui.view) go(h.view); });
   }
-  window.CapmonArena = { state: () => state, ui: ui, model: () => model };
+  window.CapmonArena = { state: () => state, ui: ui, model: () => model, runId: () => runId };
   boot();
 })();

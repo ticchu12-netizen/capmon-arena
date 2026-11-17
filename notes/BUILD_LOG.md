@@ -2,32 +2,32 @@
 
 Living file. Lets any session pick up the Season 0 build without the chat history. Plan: `CAPMON_ARENA_RELEASE_PLAN_V1.md`.
 
-## Status (Nov 16, 2026, 02:40 PT)
+## Status (Nov 16, 2026, evening)
 
 | Stage | State |
 |---|---|
 | 1. Engine | Done. All checks pass |
 | 2. Game flow | Done. Full flow passes an automated run on phone and desktop sizes |
-| 3. Look and share | Sprites and stage art are in (Nov 16). Left: share card image, share to X button, sound |
+| 3. Look and share | Sprites, stage art and the game-feel pass are in (Nov 16): effects, fighting-game HUD, VS intro, K.O. and victory screens, sound, restyled menus. Left: share card image, share to X button |
 | 4. Hardening and launch kit | Not started |
-| Hosting | Repo exists and is empty, DNS is live. **Blocked: Claude cannot push yet** (see below) |
+| Hosting | **Live at https://arena.capmon.fun** since Nov 16. Served by GitHub Pages from the `gh-pages` branch |
 | Preview | Private Claude artifact, published Nov 16: https://claude.ai/artifact/Bywz1fikpMiSKcA9fbjMhP (built by `tools/bundle_artifact.py`, weights shipped as `brain.js`) |
 
-**Next action:** when Tik says the GitHub App is installed: push (two commits are waiting in the local clone), turn on GitHub Pages (main branch, `/docs` folder), confirm arena.capmon.fun loads. Then the rest of Stage 3, then Stage 4. Also collect Tik's feedback on the preview.
+**Next action:** collect Tik's feedback on the live site, then share card image and share button, then Stage 4 (hardening, analytics hook, launch kit). Tik asked for maximum visual polish, so keep adding game feel where it is cheap.
 
 ## Hosting state
 
-- Repo `ticchu12-netizen/capmon-arena`: created by Tik, empty, readable from Claude.
-- DNS: `arena.capmon.fun` CNAME to `ticchu12-netizen.github.io` is live (checked Nov 16).
-- Push: tried and refused on Nov 16 (HTTP 403). A commit with the whole tree is ready in the local clone. The Claude GitHub App has no access to this repo. Fix on Tik's side: https://github.com/apps/claude/installations/select_target, pick the account, add `capmon-arena` under repository access.
-- Site folder is `docs/` (GitHub Pages: branch `main`, folder `/docs`). `docs/CNAME` holds the domain. `docs/index.html` carries `noindex` until launch day; remove it then.
-- After the first deploy: in GitHub Pages settings turn on Enforce HTTPS, and verify the domain capmon.fun under account settings so nobody else can claim a subdomain.
+- Repo `ticchu12-netizen/capmon-arena`. `main` holds everything. `gh-pages` holds only the contents of `docs/` and is what GitHub Pages serves. GitHub turned Pages on by itself when `gh-pages` was first pushed, and took the domain from `docs/CNAME`.
+- **To publish:** copy the working tree into the clone, commit on `main`, run `tools/deploy.sh`. Live in about a minute.
+- DNS: `arena.capmon.fun` CNAME to `ticchu12-netizen.github.io`. Checked live Nov 16: page, scripts, art and `brain.bin` (sha256 matches) all load.
+- The Pages settings API is blocked from Claude's side. Still for Tik to do by hand: Settings, Pages, tick Enforce HTTPS; and verify the domain capmon.fun in account settings so nobody else can claim a subdomain.
+- `docs/index.html` carries `noindex` until launch day. Remove it then.
 
 ## Where the work lives
 
 - Durable copy: `/mnt/user-data/outputs/capmon-arena/` plus `/mnt/user-data/outputs/capmon-arena-checkpoint.tgz`. Updated by `tools/checkpoint.sh "note"`.
 - Working copy: `<scratchpad>/arena-build/`. If it is gone, unpack the tarball there.
-- Local clone for pushing: `/home/claude/capmon-arena` (copy the working tree in, minus `node_modules` and `test/out`). If the clone is gone: clone again, copy the tree in, commit, push.
+- Local clone for pushing: `/home/claude/capmon-arena` (copy the working tree in, minus `node_modules` and `test/out`). If the clone is gone: clone again (the session needs `add_repo` with push access first), copy the tree in, commit, `tools/deploy.sh`.
 - Preview: `python3 tools/bundle_artifact.py <dir>` writes the one-file page plus `brain.js` and `assets/`. Publish the page with those as supporting files to keep the same artifact link.
 - Layout: `docs/` is the published site. `ref/` is the server engine and ONNX model used as reference. `test/` the checks. `tools/` scripts. `notes/` this log.
 
@@ -60,6 +60,10 @@ node tools/make_expected.js                                          # after any
 14. **Teach mode offers three sparring partners** (Pebble, Marshal, Apex) and any matchup. The plan said "against the 60M model" only. Losing every teaching battle to the full AI is a bad first five minutes.
 15. **Site folder is `docs/`** so GitHub Pages serves only the site and not the tests.
 16. **Art.** Rageblaze and Tsunami use the 15-frame attack sheets from capmon.fun, scaled to 384 px frames. The stage is the two-island background from capmon.fun, always 16:9 so the islands stay in frame, with the HP panels above it and the move line below it. Healspike has no 2D sheet, so its sprite is made from the 3D model render by `tools/make_healspike_sprite.py` (flat colours, dark outline). It is one frame, so it lunges but does not animate. A real Healspike sheet from Tik would replace it by swapping one file.
+17. **Look: arcade fight night.** Tik asked on Nov 16 for a loud, polished, game-like look, not a console. Fighting-game HP bars with a damage ghost, VS intro, per-move effects on a canvas (dash for Headbutt, projectile for element moves, shockwave for Intimidate, charge and beam for big moves), screen shake, hit-stop, CRITICAL and K.O. slams, camera punch on K.O., victory screen with confetti and rating count-up, 3D buttons, Russo One for impact text. Brand colours kept (cyan on near-black) with pink and gold as second voices.
+18. **Effects and sound are presentation only** (`docs/js/fx.js`). They use `Math.random` freely and never touch the engine, so replays are unaffected. Sound is synthesized in the browser (no audio files), on by default, with a mute button in the top bar that also turns off vibration.
+19. **Tests tap like a finger** (`tap()` in the test scripts: scroll to centre, press the centre). Playwright's own `click` stalls on a page that animates all the time; real input works.
+20. **`.wrap` has `width: 100%`.** Without it `main` shrank to its content inside the column layout and the stage changed width with the text under it.
 
 ## House roster and ratings (fit Nov 15, 5,500 matches, 13,237 games)
 
@@ -89,7 +93,7 @@ node tools/make_expected.js                                          # after any
 ## Open items
 
 - First push and Pages (blocked on GitHub App access).
-- Stage 3, rest: share card image, share to X button, sound with a mute switch.
+- Stage 3, rest: share card image, share to X button.
 - Stage 4: content security policy, offline cache, analytics hook, launch thread, clips, FAQ, WordPress snippet.
 - Not tested here: Firefox and Safari. The in-page device test (Check tab) will tell on a real phone.
 - `StudentBrain.cs` as .txt would settle decisions 6 and 8.
@@ -109,3 +113,5 @@ node tools/make_expected.js                                          # after any
 | Nov 16, 01:30 | DNS and repo check | DNS live, repo readable, push refused |
 | Nov 16, 02:10 | Preview bundle | Published as a private artifact. Full flow passes on the bundle |
 | Nov 16, 02:35 | Sprites and stage art | Full flow passes again, phone and desktop, no page errors. Preview updated |
+| Nov 16, 02:45 | First push, Pages on, live check | arena.capmon.fun serves every file; model file hash matches |
+| Nov 16, evening | Game-feel pass | Full flow passes on phone and desktop sizes; screenshots checked |

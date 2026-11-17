@@ -45,7 +45,7 @@
       rating: G.START_RATING, peak: G.START_RATING, ranked: { played: 0, won: 0 },
       teach: { battles: 0, wins: 0, moves: 0, salt: 0 },
       days: {}, log: [],
-      settings: { speed: 1, level: 'pebble', sound: false }
+      settings: { speed: 1, level: 'pebble', sound: true }
     };
   }
   /** Accepts whatever was stored and returns a usable state (never throws). */
@@ -80,7 +80,7 @@
     if (s.settings) {
       out.settings.speed = [1, 2, 4].indexOf(s.settings.speed) >= 0 ? s.settings.speed : 1;
       out.settings.level = G.ROSTER_BY_ID.hasOwnProperty(s.settings.level) ? s.settings.level : 'pebble';
-      out.settings.sound = !!s.settings.sound;
+      out.settings.sound = s.settings.sound !== false;
     }
     return out;
   }
