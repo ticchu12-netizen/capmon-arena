@@ -203,7 +203,8 @@
       $('#v' + s).innerHTML = '<span class="' + (x.def < x.baseDef ? 'down' : x.def > x.baseDef ? 'up' : '') + '">DEF ' + x.def + '</span><span class="' + (x.spd > x.baseSpd ? 'up' : '') + '">SPD ' + x.spd + '</span>';
       $('#f' + s).classList.toggle('down', x.hp <= 0);
     });
-    if (round != null) $('#roundchip').innerHTML = '<small>ROUND</small><b>' + round + '</b>';
+    const rc = $('#roundchip');
+    if (round != null && rc && rc.dataset.r !== String(round)) { rc.dataset.r = round; rc.innerHTML = '<small>ROUND</small><b>' + round + '</b>'; rc.classList.remove('tick'); void rc.offsetWidth; rc.classList.add('tick'); }
   }
   function pop(side, text, cls) {
     const st = $('#stage'); if (!st) return;
@@ -343,6 +344,7 @@
       stageSnap({ A: E.snapshot(game.fighters.A), B: E.snapshot(game.fighters.B) }, game.round);
       if (game.winner === 'A') wa++; else wb++;
       w.wins += game.winner; setDots(-1);
+      $('#f' + game.winner).classList.add('cheer');
       banner('<span class="eyebrow">Game ' + (gi + 1) + (game.timeout ? ', time ran out' : '') + '</span><b>' + esc(w.names[game.winner === 'A' ? 0 : 1]) + ' wins</b><span class="soft small">' + game.round + ' rounds. Games ' + wa + '-' + wb + '</span>');
       if (!w.skipAll && !await hold(1500)) return;
     }
@@ -350,9 +352,10 @@
     w.done = true;
     if (!w.rec.seen) { w.rec.seen = true; save(); }
     const won = (w.rec.me === 'A') === (wa > wb), mine = w.rec.k !== 'v', next = nextUnseen(), consistent = w.wins === w.m.winners, delta = w.rec.r1 - w.rec.r0;
-    if (mine && won) { FX.confetti(); SFX.win(); } else if (mine) SFX.lose();
+    const promo = w.rec.k === 'r' && won && G.tierOf(w.rec.r1) !== G.tierOf(w.rec.r0);
+    if (mine && won) { FX.confetti(); SFX.win(); if (promo) setTimeout(() => SFX.learn(), 700); } else if (mine) SFX.lose();
     $('#watch-under').innerHTML = '<section class="panel result ' + (mine ? (won ? 'win' : 'loss') : '') + '"><div class="verdict' + (mine ? '' : ' plain') + '">' + (mine ? (won ? 'Victory' : 'Defeat') : 'Final') + '</div><div class="score">' + wa + ' - ' + wb + '</div>' +
-      (w.rec.k === 'r' ? '<div class="row" style="justify-content:center"><span class="chip gold">' + G.tierOf(w.rec.r1) + '</span><span class="rating" id="rate-count">' + w.rec.r0 + '</span><span class="gain ' + (delta >= 0 ? 'up' : 'dn') + '">' + (delta >= 0 ? '+' : '') + delta + '</span></div>' : '') +
+      (w.rec.k === 'r' ? '<div class="row" style="justify-content:center"><span class="chip gold">' + G.tierOf(w.rec.r1) + '</span><span class="rating" id="rate-count">' + w.rec.r0 + '</span><span class="gain ' + (delta >= 0 ? 'up' : 'dn') + '">' + (delta >= 0 ? '+' : '') + delta + '</span></div>' : '') + (promo ? '<div class="promo">Promoted to ' + G.tierOf(w.rec.r1) + '</div>' : '') +
       (consistent ? '' : '<p class="note bad">This replay did not match the result claimed in the code.</p>') +
       '<div class="row" style="justify-content:center">' + (next ? '<button class="btn primary" data-act="watch-next">Next match</button>' : '') + '<button class="btn" data-act="copy-match">Copy match ' + (CFG.links === 'hash' ? 'link' : 'code') + '</button><button class="btn ghost" data-act="w-again">Watch again</button><button class="btn ghost" data-act="nav" data-view="' + (mine ? 'arena' : 'check') + '">Back</button></div>' +
       (mine && !won ? '<p class="dim small">Lost on a habit you do not like? Teach that situation again. Habits can be overwritten.</p>' : '') + '</section>';
@@ -541,7 +544,7 @@
     const t = ui.teach; if (!t.game || !$('#stage')) return;
     stageInit([state.name, G.ROSTER_BY_ID[t.level].name], t.me, t.opp);
     stageSnap({ A: E.snapshot(t.game.fighters.A), B: E.snapshot(t.game.fighters.B) }, t.game.over ? t.game.round : t.game.round + 1);
-    if (t.game.over) { banner('<b>' + (t.game.winner === 'A' ? 'You win' : esc(G.ROSTER_BY_ID[t.level].name) + ' wins') + '</b>'); if (!t.cheered) { t.cheered = true; if (t.game.winner === 'A') { FX.confetti(); SFX.win(); } else SFX.lose(); } }
+    if (t.game.over) { $('#f' + t.game.winner).classList.add('cheer'); banner('<b>' + (t.game.winner === 'A' ? 'You win' : esc(G.ROSTER_BY_ID[t.level].name) + ' wins') + '</b>'); if (!t.cheered) { t.cheered = true; if (t.game.winner === 'A') { FX.confetti(); SFX.win(); } else SFX.lose(); } }
   }
   document.addEventListener('click', ev => {
     const el = ev.target.closest('[data-act]'); if (!el || el.disabled) return;
